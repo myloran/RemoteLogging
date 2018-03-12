@@ -1,14 +1,17 @@
-﻿using Okwy.Logging;
-using Okwy.Logging.Appenders;
+﻿using Byn.Net;
+using Okwy.Logging;
 using Okwy.Logging.Formatters;
+using System.Text;
 using UniRx;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Client : MonoBehaviour {
   readonly Okwy.Logging.Logger log = Okwy.Logging.MainLog.GetLogger(typeof(Client).Name);
   public ClientView view;
 
-  WebRtcAppender webRtc;
+  RemoteLogger logger;
+  CompositeDisposable disposable;
   bool isInit;
 
   public void Init() {
@@ -27,12 +30,28 @@ public class Client : MonoBehaviour {
     isInit = !isInit;
 
     if (isInit) {
-      webRtc = new WebRtcAppender();
+      logger = new RemoteLogger();
       MainLog.AddAppender(GetWebRtcAppender());
-      webRtc.Connect("log");
+      logger.Connect("log");
+
+      disposable = new CompositeDisposable();
+      logger.remote.OnEvent
+        .Where(_ => _.Type == NetEventType.Disconnected)
+        .Subscribe(_ => {
+          ToggleInit();
+          ToggleInit();
+        })
+        .AddTo(disposable);
+
+      logger.remote.OnEvent
+        .Where(_ => _.Type == NetEventType.NewConnection)
+        .Subscribe(_ => view.startButton
+          .GetComponentInChildren<Text>().text = "Stop client")
+        .AddTo(disposable);
     } else {
       MainLog.RemoveAppender(GetWebRtcAppender());
-      webRtc.Disconnect();
+      logger.Disconnect();
+      disposable.Dispose();
     }
 
     view.Toggle(isInit);
@@ -40,7 +59,7 @@ public class Client : MonoBehaviour {
 
   LogDelegate GetWebRtcAppender() {
     return ((logger, logLevel, message) => {
-      webRtc.Send(new FullFormatter()
+      this.logger.Send(new FullFormatter()
         .FormatMessage(logger, logLevel, message));
     });
   }

@@ -13,6 +13,7 @@ public class RemoteServer : IDisposable {
   public string iceServerPassword = "";
   public string iceServer2 = "stun:stun.l.google.com:19302";
   public IObservable<NetworkEvent> OnEvent => onEvent;
+  public bool IsServer => isServer;
 
   List<ConnectionId> connections = new List<ConnectionId>();
   IBasicNetwork network;
@@ -72,37 +73,13 @@ public class RemoteServer : IDisposable {
 
       } else if (Event.Type == NetEventType.Disconnected) {
         connections.Remove(Event.ConnectionId);
-        if (isServer == false) Disconnect();
 
-      } else if (Event.Type == NetEventType.ReliableMessageReceived ||
-        Event.Type == NetEventType.UnreliableMessageReceived
-      ) HandleIncommingMessage(ref Event);
+        if (isServer == false) Disconnect();
+      } 
       onEvent.OnNext(Event);
     }
 
     if (network != null) network.Flush();
-  }
-
-  void HandleIncommingMessage(ref NetworkEvent Event) {
-    if (!isServer) return;
-
-    var data = Event.MessageData;
-    string message = Encoding.UTF8.GetString(
-      data.Buffer,
-      0,
-      data.ContentLength);
-
-    Directory.CreateDirectory(Path.Combine(
-      Application.persistentDataPath,
-      "RemoteLogging"));
-
-    using (StreamWriter streamWriter = new StreamWriter(
-      Path.Combine(
-        Application.persistentDataPath,
-        "RemoteLogging",
-        Event.ConnectionId + ".log"),
-      append: true)
-    ) streamWriter.WriteLine(message);
   }
 
   public void Create(string name) {

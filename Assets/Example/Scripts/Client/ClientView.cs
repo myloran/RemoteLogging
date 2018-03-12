@@ -14,7 +14,7 @@ public class ClientView : MonoBehaviour {
     messageInput.interactable = isInit;
 
     if (isInit)
-      startButton.GetComponentInChildren<Text>().text = "Stop client";
+      startButton.GetComponentInChildren<Text>().text = "Connecting to server...";
     else
       startButton.GetComponentInChildren<Text>().text = "Start client";
   }

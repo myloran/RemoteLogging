@@ -8,7 +8,7 @@ public class ServerView : MonoBehaviour {
 
   public void Toggle(bool isInit) {
     if (isInit)
-      startButton.GetComponentInChildren<Text>().text = "Stop server";
+      startButton.GetComponentInChildren<Text>().text = "Starting server...";
     else
       startButton.GetComponentInChildren<Text>().text = "Start server";
   }
