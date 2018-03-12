@@ -12,16 +12,16 @@ public class RemoteServer : IDisposable {
   public string iceServerUser = "";
   public string iceServerPassword = "";
   public string iceServer2 = "stun:stun.l.google.com:19302";
-  public IObservable<NetEventType> OnEvent => onEvent;
+  public IObservable<NetworkEvent> OnEvent => onEvent;
 
   List<ConnectionId> connections = new List<ConnectionId>();
   IBasicNetwork network;
   const int max_code_length = 256;
   bool isServer;
-  Subject<NetEventType> onEvent = new Subject<NetEventType>();
+  Subject<NetworkEvent> onEvent = new Subject<NetworkEvent>();
   bool isInit;
 
-  public void Init() {
+  void Init() { //why WebRtcNetworkFactory.Instance must be called at start?
     network = WebRtcNetworkFactory.Instance.CreateDefault( //why it tries to connect on destroy?
       signalingUrl, 
       new IceServer[] {
@@ -44,7 +44,7 @@ public class RemoteServer : IDisposable {
   }
 
   void Cleanup() {
-    network.Dispose();
+    network?.Dispose();
     network = null;
   }
 
@@ -57,18 +57,18 @@ public class RemoteServer : IDisposable {
     while (network != null && network.Dequeue(out Event)) {
       if (Event.Type == NetEventType.ServerInitialized) {
         isServer = true;
-        Debug.Log("success" + Event.ConnectionId);
+        //Debug.Log("success" + Event.ConnectionId);
 
       } else if (Event.Type == NetEventType.ServerInitFailed) {
         Disconnect();
-        Debug.Log("fail" + Event.ConnectionId);
+        //Debug.Log("fail" + Event.ConnectionId);
 
       } else if (Event.Type == NetEventType.ServerClosed) {
         isServer = false;
 
       } else if (Event.Type == NetEventType.NewConnection) {
         connections.Add(Event.ConnectionId);
-        Debug.Log(Event.ConnectionId);
+        //Debug.Log(Event.ConnectionId);
 
       } else if (Event.Type == NetEventType.ConnectionFailed) {
         Disconnect();
@@ -80,33 +80,33 @@ public class RemoteServer : IDisposable {
       } else if (Event.Type == NetEventType.ReliableMessageReceived ||
         Event.Type == NetEventType.UnreliableMessageReceived
       ) HandleIncommingMessage(ref Event);
-      onEvent.OnNext(Event.Type);
+      onEvent.OnNext(Event);
+      //Event.MessageData.Dispose();
     }
 
     if (network != null) network.Flush();
   }
 
   void HandleIncommingMessage(ref NetworkEvent Event) {
-    using (MessageDataBuffer buffer = Event.MessageData) {
-      string message = Encoding.UTF8.GetString(
-        buffer.Buffer, 
-        0, 
-        buffer.ContentLength);
+    if (!isServer) return;
 
-      if (isServer) {
-        Directory.CreateDirectory(Path.Combine(
-          Application.persistentDataPath,
-          "Remote logs"));
+    var data = Event.MessageData;
+    string message = Encoding.UTF8.GetString(
+      data.Buffer,
+      0,
+      data.ContentLength);
 
-        using (StreamWriter streamWriter = new StreamWriter(
-          Path.Combine(
-            Application.persistentDataPath,
-            "Remote logs",
-            Event.ConnectionId + ".log"),
-          append: true)
-        ) streamWriter.WriteLine(message);
-      }
-    }
+    Directory.CreateDirectory(Path.Combine(
+      Application.persistentDataPath,
+      "RemoteLogging"));
+
+    using (StreamWriter streamWriter = new StreamWriter(
+      Path.Combine(
+        Application.persistentDataPath,
+        "RemoteLogging",
+        Event.ConnectionId + ".log"),
+      append: true)
+    ) streamWriter.WriteLine(message);
   }
 
   public void Create(string name) {
