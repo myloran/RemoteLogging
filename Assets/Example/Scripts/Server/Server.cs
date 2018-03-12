@@ -2,21 +2,15 @@
 using System.Text;
 using UniRx;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class Server : MonoBehaviour {
-  public ScrollRect logsScroll;
-  public Button startButton;
-  public Text logPrefab;
+  public ServerView view;
 
   RemoteServer server;
   bool isInit;
 
   public void Init() {    
-    startButton
-      .OnClickAsObservable()
-      .Subscribe(_ => ToggleInit())
-      .AddTo(startButton);
+    view.startButton.Sub(_ => ToggleInit());
   }
 
   void ToggleInit() {
@@ -31,22 +25,17 @@ public class Server : MonoBehaviour {
           && _.Type != NetEventType.UnreliableMessageReceived
         ) return;
 
-        var data = _.MessageData;
-
         string message = Encoding.UTF8.GetString(
-          data.Buffer,
+          _.MessageData.Buffer,
           0,
-          data.ContentLength);
+          _.MessageData.ContentLength);
 
-        var log = Instantiate(logPrefab, logsScroll.content);
-        log.text = message;
-      }).AddTo(startButton);
-
-      startButton.GetComponentInChildren<Text>().text = "Stop server";
+        view.SpawnText(message);        
+      }).AddTo(this);
     } else {
       server.Disconnect();
-
-      startButton.GetComponentInChildren<Text>().text = "Start server";
     }
+
+    view.Toggle(isInit);
   }
 }

@@ -57,18 +57,15 @@ public class RemoteServer : IDisposable {
     while (network != null && network.Dequeue(out Event)) {
       if (Event.Type == NetEventType.ServerInitialized) {
         isServer = true;
-        //Debug.Log("success" + Event.ConnectionId);
 
       } else if (Event.Type == NetEventType.ServerInitFailed) {
         Disconnect();
-        //Debug.Log("fail" + Event.ConnectionId);
 
       } else if (Event.Type == NetEventType.ServerClosed) {
         isServer = false;
 
       } else if (Event.Type == NetEventType.NewConnection) {
         connections.Add(Event.ConnectionId);
-        //Debug.Log(Event.ConnectionId);
 
       } else if (Event.Type == NetEventType.ConnectionFailed) {
         Disconnect();
@@ -81,7 +78,6 @@ public class RemoteServer : IDisposable {
         Event.Type == NetEventType.UnreliableMessageReceived
       ) HandleIncommingMessage(ref Event);
       onEvent.OnNext(Event);
-      //Event.MessageData.Dispose();
     }
 
     if (network != null) network.Flush();

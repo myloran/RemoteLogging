@@ -5,7 +5,7 @@ public class RemoteLoggingExample : MonoBehaviour {
   public Client client;
 
   public void Start() {
-    var factory = WebRtcNetworkFactory.Instance;
+    var factory = WebRtcNetworkFactory.Instance; //we need to call it on start to create instance in time
     server.Init();
     client.Init();
   }

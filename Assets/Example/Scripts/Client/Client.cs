@@ -3,53 +3,39 @@ using Okwy.Logging.Appenders;
 using Okwy.Logging.Formatters;
 using UniRx;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class Client : MonoBehaviour {
   readonly Okwy.Logging.Logger log = Okwy.Logging.MainLog.GetLogger(typeof(Client).Name);
-  public InputField messageInput;
-
-  public Button
-    startButton,
-    sendButton;
+  public ClientView view;
 
   WebRtcAppender webRtc;
   bool isInit;
 
   public void Init() {
-    startButton
-      .OnClickAsObservable()
-      .Subscribe(_ => ToggleInit())
-      .AddTo(startButton);
-
-    sendButton
-      .OnClickAsObservable()
-      .Subscribe(_ => SendMessage())
-      .AddTo(startButton);
+    view.startButton.Sub(_ => ToggleInit());
+    view.sendButton.Sub(_ => SendMessage());
   }
 
   void SendMessage() {
-    if (messageInput.text != "") {
-      log.Info("Send.message: " + messageInput.text);
-      messageInput.text = "";
+    if (view.messageInput.text != "") {
+      log.Info("SendMessage: " + view.messageInput.text);
+      view.messageInput.text = "";
     }
   }
 
   void ToggleInit() {
     isInit = !isInit;
-    sendButton.interactable = isInit;
-    messageInput.interactable = isInit;
 
     if (isInit) {
-      MainLog.AddAppender(GetWebRtcAppender());
       webRtc = new WebRtcAppender();
+      MainLog.AddAppender(GetWebRtcAppender());
       webRtc.Connect("log");
-      startButton.GetComponentInChildren<Text>().text = "Stop client";
     } else {
       MainLog.RemoveAppender(GetWebRtcAppender());
       webRtc.Disconnect();
-      startButton.GetComponentInChildren<Text>().text = "Start client";
     }
+
+    view.Toggle(isInit);
   }
 
   LogDelegate GetWebRtcAppender() {
