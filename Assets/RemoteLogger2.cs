@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 using UniRx;
 using UnityEngine;
 
-public class RemoteLogger : IRemoteLogger {
-  public RemoteServer remote = new RemoteServer();
+public class RemoteLogger2 : IRemoteLogger {
+  public IOkwyNetwork network = new OkwyNetwork();
   object Lock = new object();
 
   string offlineLogsPath = Path.Combine(
@@ -16,14 +16,12 @@ public class RemoteLogger : IRemoteLogger {
     "Offline.log");
 
   public IRemoteLogger StartServer(string name) {
-    remote.Create(name);
+    network.Init().Listen(name);
 
-    remote.OnEvent.Subscribe(_ => {
+    network.OnEvent.Subscribe(_ => {
       if ((_.Type != NetEventType.ReliableMessageReceived
         && _.Type != NetEventType.UnreliableMessageReceived)
       ) return;
-
-      if (!remote.IsServer) return;
 
       string message = Encoding.UTF8.GetString(
         _.MessageData.Buffer,
@@ -34,13 +32,15 @@ public class RemoteLogger : IRemoteLogger {
         Application.persistentDataPath,
         "RemoteLogging"));
 
-      using (StreamWriter streamWriter = new StreamWriter(
+      using (var streamWriter = new StreamWriter(
         Path.Combine(
           Application.persistentDataPath,
           "RemoteLogging",
           _.ConnectionId + ".log"),
         append: true)
       ) streamWriter.WriteLine(message);
+
+      Debug.Log($"{_.ConnectionId}: {message}");
     });
     return this;
   }
@@ -52,18 +52,18 @@ public class RemoteLogger : IRemoteLogger {
     Directory.CreateDirectory(Path
       .GetDirectoryName(offlineLogsPath));
 
-    remote.Connect(name);
+    network.Init().Connect(name);
 
-    remote.OnEvent.Subscribe(async _ => {
+    network.OnEvent.Subscribe(async _ => {
       if (_.Type == NetEventType.ConnectionFailed) {
         await Task.Delay(delayMs);
 
-        remote.Connect(name);
+        network.Connect(name);
       }
 
       if (_.Type == NetEventType.NewConnection
         && File.Exists(offlineLogsPath)
-    ) {
+      ) {
         foreach (var message in LoadMessages())
           Send(message);
       }
@@ -72,12 +72,12 @@ public class RemoteLogger : IRemoteLogger {
   }
 
   public void Disconnect() {
-    remote.Disconnect();
+    network.Dispose();
   }
 
   public void Send(string message) {
-    if (remote.IsConnected()) {
-      remote.Send(message);
+    if (network.IsConnected()) {
+      network.Send(message);
       return;
     }
     Save(message);
@@ -87,7 +87,7 @@ public class RemoteLogger : IRemoteLogger {
     var Lock = this.Lock;
 
     lock (Lock) {
-      using (StreamWriter streamWriter = new StreamWriter(
+      using (var streamWriter = new StreamWriter(
         offlineLogsPath,
         append: true)
       ) streamWriter.WriteLine(message);

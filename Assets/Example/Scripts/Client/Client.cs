@@ -32,7 +32,7 @@ public class Client : MonoBehaviour {
     if (isInit) {
       logger = new RemoteLogger();
       MainLog.AddAppender(GetWebRtcAppender());
-      logger.Connect("log");
+      logger.StartClient("log");
 
       disposable = new CompositeDisposable();
       logger.remote.OnEvent

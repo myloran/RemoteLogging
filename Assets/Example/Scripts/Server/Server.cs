@@ -20,7 +20,7 @@ public class Server : MonoBehaviour {
 
     if (isInit) {
       logger = new RemoteLogger();
-      logger.Create("log");
+      logger.StartServer("log");
 
       disposable = new CompositeDisposable();
       logger.remote.OnEvent.Subscribe(_ => {
